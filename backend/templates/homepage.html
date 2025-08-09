@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutor IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .thinking-spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center mb-4">Tutor IA</h1>
+        <div id="chatArea" class="bg-gray-50 p-4 rounded border h-64 overflow-y-auto mb-4">
+            <div class="text-gray-500 text-center">A conversa aparecerá aqui...</div>
+        </div>
+        <div class="mb-4">
+            <input
+                type="text"
+                id="userInput"
+                placeholder="Digite sua mensagem..."
+                class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+        </div>
+        <div class="flex justify-between mb-4">
+            <button
+                id="sendButton"
+                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center"
+            >
+                Enviar
+                <span id="thinkingSpinner" class="thinking-spinner"></span>
+            </button>
+            <button
+                id="recordButton"
+                class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            >
+                Gravar Áudio
+            </button>
+            <button
+                id="stopButton"
+                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 hidden"
+            >
+                Parar Gravação
+            </button>
+            <button
+                id="resetButton"
+                class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+            >
+                Reiniciar Conversa
+            </button>
+        </div>
+    </div>
+    <footer class="mt-4 text-gray-600">
+        Desenvolvido por Lucas Gomes
+    </footer>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        const recordButton = document.getElementById("recordButton");
+        const stopButton = document.getElementById("stopButton");
+        const sendButton = document.getElementById("sendButton");
+        const resetButton = document.getElementById("resetButton");
+        const userInput = document.getElementById("userInput");
+        const chatArea = document.getElementById("chatArea");
+        const thinkingSpinner = document.getElementById("thinkingSpinner");
+
+        // Initialize Web Speech API for speech-to-text
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = "pt-BR";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        // Append message to chat area
+        function appendMessage(role, content) {
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add(
+                role === "user" ? "text-right" : "text-left",
+                "mb-2"
+            );
+            messageDiv.innerHTML = `
+                <span class="inline-block p-2 rounded-lg ${
+                    role === "user" ? "bg-blue-100" : "bg-gray-200"
+                }">
+                    ${content}
+                </span>
+            `;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // Show/hide thinking animation
+        function toggleThinking(show) {
+            thinkingSpinner.style.display = show ? "block" : "none";
+        }
+
+        // Send text message to AI
+        async function sendMessage(message) {
+            toggleThinking(true);
+            appendMessage("user", message);
+            try {
+                const response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message }),
+                });
+                const data = await response.json();
+                toggleThinking(false);
+                if (data.error) {
+                    appendMessage("assistant", `Erro: ${data.error}`);
+                    return;
+                }
+                appendMessage("assistant", data.response);
+                // Trigger text-to-speech
+                playAudio(data.response);
+            } catch (error) {
+                toggleThinking(false);
+                appendMessage("assistant", "Erro ao enviar mensagem.");
+                console.error(error);
+            }
+        }
+
+        // Play AI response as audio
+        async function playAudio(text) {
+            try {
+                const response = await fetch("/api/speak", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text }),
+                });
+                if (!response.ok) {
+                    console.error("Erro ao gerar áudio");
+                    return;
+                }
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+            } catch (error) {
+                console.error("Erro ao reproduzir áudio:", error);
+            }
+        }
+
+        // Handle text input
+        sendButton.addEventListener("click", () => {
+            const message = userInput.value.trim();
+            if (message) {
+                sendMessage(message);
+                userInput.value = "";
+            }
+        });
+
+        // Handle Enter key for text input
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                sendButton.click();
+            }
+        });
+
+        // Handle audio recording (speech-to-text)
+        recordButton.addEventListener("click", () => {
+            recognition.start();
+            recordButton.classList.add("hidden");
+            stopButton.classList.remove("hidden");
+        });
+
+        stopButton.addEventListener("click", () => {
+            recognition.stop();
+            recordButton.classList.remove("hidden");
+            stopButton.classList.add("hidden");
+        });
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            userInput.value = transcript;
+            sendMessage(transcript);
+        };
+
+        recognition.onerror = (event) => {
+            appendMessage("assistant", "Erro na gravação de áudio.");
+            console.error(event.error);
+            recordButton.classList.remove("hidden");
+            stopButton.classList.add("hidden");
+        };
+
+        // Reset chat history
+        resetButton.addEventListener("click", async () => {
+            try {
+                const response = await fetch("/api/reset_chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                });
+                const data = await response.json();
+                chatArea.innerHTML = '<div class="text-gray-500 text-center">A conversa aparecerá aqui...</div>';
+            } catch (error) {
+                appendMessage("assistant", "Erro ao resetar o chat.");
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

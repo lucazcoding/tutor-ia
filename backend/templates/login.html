@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutor IA</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600&display=swap" rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        /* Scrollbar personalizado para resposta */
+        #resposta::-webkit-scrollbar {
+            width: 8px;
+        }
+        #resposta::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        #resposta::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        #resposta::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        .robot {
+            width: 170px;
+            height: 150px;
+            animation: float 2s ease-in-out infinite;
+        }
+        .robot.speaking {
+            animation: talk 0.15s infinite alternate;
+        }
+        @keyframes float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+        @keyframes talk {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+
+        footer.assinatura {
+            margin: 20px auto;
+            padding: 10px 20px;
+            text-align: center;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+            color: white;
+            background: linear-gradient(135deg, #010A20, rgb(0, 40, 85), rgb(5, 52, 103));
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2), 0 -2px 8px rgba(203,19,171,0.15);
+            user-select: none;
+            width: 90%;
+            max-width: 480px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        footer.assinatura:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3), 0 -3px 10px rgba(203,19,171,0.25);
+        }
+        footer.assinatura p {
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        footer.assinatura a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s ease, transform 0.3s ease;
+        }
+        footer.assinatura a:hover,
+        footer.assinatura a:focus {
+            color: #e0e0e0;
+            text-decoration: underline;
+            transform: scale(1.03);
+        }
+
+        #titlerobot {
+            text-align: center;
+            font-weight: 600;
+            font-size: 2rem;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Dark Mode */
+        body.dark {
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+        body.dark #resposta {
+            background-color: #1f2937;
+            border-color: #374151;
+            color: white;
+        }
+        body.dark textarea {
+            background-color: #1f2937;
+            color: white;
+            border-color: #4b5563;
+        }
+        body.dark textarea::placeholder {
+            color: #9ca3af;
+        }
+        body.dark .bg-white {
+            background-color: #1e293b !important;
+        }
+        body.dark .text-gray-800 {
+            color: #f3f4f6 !important;
+        }
+        body.dark .bg-gray-100 {
+            background-color: #1f2937 !important;
+        }
+        body.dark .bg-indigo-100 {
+            background-color: #312e81 !important;
+            color: #dbeafe !important;
+        }
+
+        /* Responsivo */
+        @media screen and (max-width: 480px) {
+            .robot {
+                width: 100px;
+                height: 90px;
+            }
+            footer.assinatura {
+                padding: 8px 15px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm py-4 px-6 md:px-10 lg:px-16 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <!-- Logo/Brand -->
+            <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1m-1.636 6.364l-.707-.707M12 21v-1m-6.364-1.636l.707-.707M3 12H4m1.636-6.364l.707-.707M6 10v4a2 2 0 002 2h3.586a1 1 0 00.707-.293l2.414-2.414a1 1 0 00-.707-1.707H8a2 2 0 01-2-2V6a2 2 0 012-2h3.586a1 1 0 00.707-.293l2.414-2.414A1 1 0 0015.586 2H8a6 6 0 00-6 6v4a6 6 0 006 6z">
+                </path>
+            </svg>
+        </div>
+        <nav class="hidden md:flex space-x-8"></nav>
+        <button onclick="toggleDarkMode()">🌙</button>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-grow container mx-auto p-4 md:p-8 lg:p-12 flex items-center justify-center">
+        <div
+            class="bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-10 max-w-2xl w-full flex flex-col">
+
+            <span id="titlerobot">Tutor IA</span>
+
+            <div class="flex items-center justify-center mb-6">
+                <img src="static/robo_parado.png" class="robot" id="robot" alt="Robô Tutor IA" />
+            </div>
+
+            <div class="relative mb-4">
+                <textarea
+                    id="pergunta"
+                    class="w-full p-3 pr-12 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 resize-none"
+                    rows="3"
+                    placeholder="Digite sua pergunta aqui..."></textarea>
+
+                <button id="send-button" 
+                    class="absolute bottom-3 right-3 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition duration-300 shadow-md"
+                    aria-label="Enviar pergunta">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button id="recordButton"
+                    class="bg-green-500 text-white px-4 py-3 rounded-lg shadow-md hover:bg-green-600 transition duration-300 flex items-center justify-center space-x-2"
+                    type="button">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <span>Gravar Áudio</span>
+                </button>
+
+                <button id="stopButton"
+                    class="bg-yellow-500 text-white px-4 py-3 rounded-lg shadow-md hover:bg-yellow-600 transition duration-300 flex items-center justify-center space-x-2"
+                    type="button" disabled>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                    </svg>
+                    <span>Parar Gravação</span>
+                </button>
+
+                <button id="resetButton"
+                    class="bg-red-500 text-white px-4 py-3 rounded-lg shadow-md hover:bg-red-600 transition duration-300 flex items-center justify-center space-x-2 col-span-2"
+                    type="button">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12c0 2.21.817 4.265 2.18 5.868L4 20h5.582m4.418-15h.582m-4.418 0a8.001 8.001 0 0115.356 2A8.001 8.001 0 0020 12c0-2.21-.817-4.265-2.18-5.868L20 4h-5.582z">
+                        </path>
+                    </svg>
+                    <span>Reiniciar Conversa</span>
+                </button>
+            </div>
+
+            <div id="resposta"
+                class="bg-gray-100 p-4 rounded-lg shadow-inner mt-4 overflow-y-auto border border-gray-200"
+                style="min-height: 150px; max-height: 400px;">
+                A resposta aparecerá aqui...
+            </div>
+        </div>
+    </main>
+
+    <footer class="assinatura">
+        <p>Desenvolvido por <a href="https://github.com/lucazcoding" target="_blank" rel="noopener noreferrer">Lucas Gomes</a></p>
+    </footer>
+
+<script>
+  const recordButton = document.getElementById('recordButton');
+const stopButton = document.getElementById('stopButton');
+const perguntaInput = document.getElementById('pergunta');
+const respostaDiv = document.getElementById('resposta');
+const sendButton = document.getElementById('send-button');
+const resetButton = document.getElementById('reset-button'); // Certifique-se de ter esse botão no HTML
+const robot = document.getElementById('robot');
+
+// Função debounce para evitar múltiplos envios
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Reconhecimento de voz
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+    appendMessage('Reconhecimento de voz não suportado neste navegador.', 'error');
+    recordButton.disabled = true;
+} else {
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recordButton.onclick = () => {
+        recognition.start();
+        appendMessage('Ouvindo... fale agora.', 'system');
+        recordButton.disabled = true;
+        stopButton.disabled = false;
+    };
+
+    stopButton.onclick = () => {
+        recognition.stop();
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+    };
+
+    recognition.onresult = async (event) => {
+        const textoFalado = event.results[0][0].transcript.trim();
+        if (textoFalado && textoFalado.length > 2) {
+            perguntaInput.value = textoFalado;
+            appendMessage(`Você disse: ${textoFalado}`, 'user');
+            await enviarPergunta();
+        } else {
+            appendMessage('Fala muito curta ou vazia, tente novamente.', 'error');
+        }
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+    };
+
+    recognition.onerror = (event) => {
+        appendMessage(`Erro no reconhecimento de voz: ${event.error}`, 'error');
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+    };
+
+    recognition.onend = () => {
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+    };
+}
+
+// Enviar pergunta (debounce 500ms)
+const enviarPergunta = debounce(async () => {
+    const userMessage = perguntaInput.value.trim();
+    if (userMessage === '') {
+        appendMessage('Por favor, fale ou digite uma pergunta.', 'error');
+        return;
+    }
+
+    sendButton.disabled = true;
+    appendMessage(userMessage, 'user');
+
+    const thinkingMessage = document.createElement('div');
+    thinkingMessage.classList.add('flex', 'items-start', 'mb-4');
+    thinkingMessage.innerHTML = `
+        <div class="bg-indigo-100 text-indigo-800 p-3 rounded-xl rounded-bl-none shadow-sm max-w-[80%]">
+            <p class="text-sm font-medium">Pensando...</p>
+        </div>
+    `;
+    respostaDiv.appendChild(thinkingMessage);
+    respostaDiv.scrollTop = respostaDiv.scrollHeight;
+
+    perguntaInput.value = '';
+
+    try {
+        const chatResponse = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: userMessage }),
+        });
+
+        if (!chatResponse.ok) throw new Error(`Erro HTTP: ${chatResponse.status}`);
+
+        const chatData = await chatResponse.json();
+        const aiTextResponse = chatData.response;
+
+        if (respostaDiv.contains(thinkingMessage)) {
+            respostaDiv.removeChild(thinkingMessage);
+        }
+
+        appendMessage(aiTextResponse, 'ai');
+
+        if (aiTextResponse) {
+            try {
+                const audioResponse = await fetch('/api/speak', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: aiTextResponse }),
+                });
+
+                if (!audioResponse.ok) {
+                    appendMessage('Erro ao gerar áudio da resposta.', 'error');
+                    return;
+                }
+
+                const audioBlob = await audioResponse.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+
+                robot.src = "static/robo_falando.gif";
+                robot.classList.add('speaking');
+                audio.play();
+
+                audio.onended = () => {
+                    robot.src = "static/robo_parado.png";
+                    robot.classList.remove('speaking');
+                    URL.revokeObjectURL(audioUrl);
+                };
+            } catch (audioError) {
+                appendMessage('Erro ao reproduzir áudio.', 'error');
+            }
+        }
+    } catch (error) {
+        if (respostaDiv.contains(thinkingMessage)) {
+            respostaDiv.removeChild(thinkingMessage);
+        }
+        appendMessage('Ocorreu um erro ao comunicar com o Tutor IA.', 'error');
+    } finally {
+        sendButton.disabled = false;
+        respostaDiv.scrollTop = respostaDiv.scrollHeight;
+    }
+}, 500);
+
+// Botão enviar
+sendButton.addEventListener('click', enviarPergunta);
+
+// Enviar com Enter
+perguntaInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter' && !sendButton.disabled) {
+        event.preventDefault();
+        enviarPergunta();
+    }
+});
+
+// Resetar chat
+resetButton.addEventListener('click', resetarChat);
+
+async function resetarChat() {
+    respostaDiv.innerHTML = '';
+    appendMessage('Reiniciando conversa...', 'system');
+    try {
+        const response = await fetch('/api/reset_chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+
+        const data = await response.json();
+        respostaDiv.innerHTML = '';
+        appendMessage(data.message || 'Conversa reiniciada.', 'system');
+        appendMessage('A resposta aparecerá aqui...', 'system');
+        perguntaInput.value = '';
+        respostaDiv.scrollTop = respostaDiv.scrollHeight;
+    } catch (error) {
+        respostaDiv.innerHTML = '';
+        appendMessage('Erro ao reiniciar a conversa.', 'error');
+        respostaDiv.scrollTop = respostaDiv.scrollHeight;
+    }
+}
+
+// Função para adicionar mensagens no chat
+function appendMessage(message, sender) {
+    const lastMessage = respostaDiv.lastChild?.textContent?.trim();
+    if (lastMessage === message) return;
+
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('flex', 'mb-4');
+
+    if (sender === 'user') {
+        messageElement.classList.add('justify-end');
+        messageElement.innerHTML = `
+            <div class="bg-blue-500 text-white p-3 rounded-xl rounded-br-none shadow-sm max-w-[80%]">
+                <p class="text-sm font-medium">${message}</p>
+            </div>
+        `;
+    } else if (sender === 'ai') {
+        messageElement.classList.add('items-start');
+        messageElement.innerHTML = `
+            <div class="bg-indigo-100 text-indigo-800 p-3 rounded-xl rounded-bl-none shadow-sm max-w-[80%]">
+                <p class="text-sm font-medium">${message}</p>
+            </div>
+        `;
+    } else if (sender === 'system') {
+        messageElement.classList.add('justify-center');
+        messageElement.innerHTML = `
+            <div class="bg-gray-200 text-gray-700 p-2 rounded-lg text-xs italic max-w-[80%] text-center">
+                ${message}
+            </div>
+        `;
+    } else if (sender === 'error') {
+        messageElement.classList.add('justify-center');
+        messageElement.innerHTML = `
+            <div class="bg-red-100 text-red-800 p-2 rounded-lg text-xs italic max-w-[80%] text-center">
+                ${message}
+            </div>
+        `;
+    }
+    respostaDiv.appendChild(messageElement);
+    respostaDiv.scrollTop = respostaDiv.scrollHeight;
+}
+
+// Mensagem inicial ao carregar a página
+document.addEventListener('DOMContentLoaded', () => {
+    appendMessage('Olá! Sou o seu Tutor IA. Como posso ajudá-lo a aprender inglês hoje?', 'ai');
+});
+
+// Alternar modo escuro
+function toggleDarkMode() {
+    document.body.classList.toggle('dark');
+}
+
+
+</script>
